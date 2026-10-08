@@ -1,0 +1,260 @@
+{
+ "fernandez-rn-34": {
+  "lat": -27.93,
+  "lon": -63.89,
+  "radio": 12,
+  "nota": "sobre RN 34, cerca de Fernández"
+ },
+ "junin-rn-188": {
+  "lat": -34.5,
+  "lon": -60.88,
+  "radio": 6,
+  "nota": "RN 188 al noreste de Junín"
+ },
+ "riachuelo-rn-12": {
+  "lat": -27.58,
+  "lon": -58.72,
+  "radio": 10,
+  "nota": "RN 12, cerca de Riachuelo"
+ },
+ "colonia-victoria-rn-12": {
+  "lat": -26.23,
+  "lon": -54.65,
+  "radio": 10,
+  "nota": "RN 12, cerca de Colonia Victoria"
+ },
+ "sampacho-rn-8": {
+  "lat": -33.38,
+  "lon": -64.72,
+  "radio": 10,
+  "nota": "RN 8, cerca de Sampacho"
+ },
+ "solis-rn-8": {
+  "lat": -34.3,
+  "lon": -59.33,
+  "radio": 10,
+  "nota": "RN 8 entre Pilar y Pergamino"
+ },
+ "franck-rn-19": {
+  "lat": -31.59,
+  "lon": -61.03,
+  "radio": 10,
+  "nota": "RN 19, cerca de Franck"
+ },
+ "ceres-rn-34": {
+  "lat": -29.88,
+  "lon": -61.95,
+  "radio": 10,
+  "nota": "RN 34, cerca de Ceres"
+ },
+ "general-lagos-rn-9": {
+  "lat": -33.1,
+  "lon": -60.58,
+  "radio": 10,
+  "nota": "RN 9 al sur de Rosario"
+ },
+ "el-dorado-rn-226": {
+  "lat": -37.6,
+  "lon": -58.6,
+  "radio": 20,
+  "nota": "RN 226 entre Mar del Plata y Tandil"
+ },
+ "vasconia-rn-226": {
+  "lat": -37.15,
+  "lon": -59.75,
+  "radio": 20,
+  "nota": "RN 226 entre Tandil y Olavarría"
+ },
+ "hinojo-rn-226": {
+  "lat": -36.87,
+  "lon": -60.5,
+  "radio": 12,
+  "nota": "RN 226 al oeste de Olavarría"
+ },
+ "canuelas-rn-3": {
+  "lat": -35.04,
+  "lon": -58.74,
+  "radio": 12,
+  "nota": "RN 3, cerca de Cañuelas"
+ },
+ "uribelarrea-rn-205": {
+  "lat": -35.2,
+  "lon": -59.05,
+  "radio": 12,
+  "nota": "RN 205, cerca de Uribelarrea"
+ },
+ "junin-rn-7": {
+  "lat": -34.57,
+  "lon": -60.9,
+  "radio": 8,
+  "nota": "RN 7, cerca de Junín"
+ },
+ "vicuna-mackenna-rn-7": {
+  "lat": -33.92,
+  "lon": -64.39,
+  "radio": 10,
+  "nota": "RN 7, cerca de Vicuña Mackenna"
+ },
+ "la-paz-rn-7": {
+  "lat": -33.46,
+  "lon": -67.55,
+  "radio": 10,
+  "nota": "RN 7, cerca de La Paz"
+ },
+ "olivera-rn-5": {
+  "lat": -34.62,
+  "lon": -59.27,
+  "radio": 6,
+  "nota": "RN 5 entre Luján y Mercedes"
+ },
+ "9-de-julio-rn-5": {
+  "lat": -35.44,
+  "lon": -60.88,
+  "radio": 10,
+  "nota": "RN 5, cerca de 9 de Julio"
+ },
+ "donovan-au-riccheri": {
+  "lat": -34.74,
+  "lon": -58.505,
+  "radio": 4,
+  "nota": "Autopista Riccheri"
+ },
+ "boulogne-sur-mer-au-riccheri": {
+  "lat": -34.78,
+  "lon": -58.52,
+  "radio": 4,
+  "nota": "Autopista Riccheri"
+ },
+ "monte-grande-au-ezeiza-canuelas": {
+  "lat": -34.83,
+  "lon": -58.49,
+  "radio": 5,
+  "nota": "Autopista Ezeiza–Cañuelas"
+ },
+ "ezeiza-au-ezeiza-canuelas": {
+  "lat": -34.87,
+  "lon": -58.525,
+  "radio": 5,
+  "nota": "Autopista Ezeiza–Cañuelas"
+ },
+ "tristan-suarez-au-ezeiza-canuelas": {
+  "lat": -34.895,
+  "lon": -58.55,
+  "radio": 5,
+  "nota": "Autopista Ezeiza–Cañuelas"
+ },
+ "piedritas-rn-14": {
+  "lat": -32.05,
+  "lon": -58.2,
+  "radio": 20,
+  "nota": "RN 14 entre Concepción del Uruguay y Concordia"
+ },
+ "ituzaingo-acceso-oeste": {
+  "lat": -34.655,
+  "lon": -58.675,
+  "radio": 4,
+  "nota": "Acceso Oeste, cerca de Ituzaingó"
+ },
+ "general-rodriguez-acceso-oeste": {
+  "lat": -34.605,
+  "lon": -58.955,
+  "radio": 5,
+  "nota": "Acceso Oeste, cerca de General Rodríguez"
+ },
+ "villa-elisa-autopista-buenos-aires-la-plata-ida": {
+  "lat": -34.855,
+  "lon": -58.085,
+  "radio": 6,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "dock-sud-autopista-buenos-aires-la-plata-ida": {
+  "lat": -34.667,
+  "lon": -58.357,
+  "radio": 4,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "hudson-autopista-buenos-aires-la-plata-ida": {
+  "lat": -34.8,
+  "lon": -58.15,
+  "radio": 6,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "gutierrez-autopista-buenos-aires-la-plata-ida": {
+  "lat": -34.775,
+  "lon": -58.19,
+  "radio": 5,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "hudson-autopista-buenos-aires-la-plata-vuelta": {
+  "lat": -34.8,
+  "lon": -58.15,
+  "radio": 6,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "bernal-autopista-buenos-aires-la-plata-vuelta": {
+  "lat": -34.715,
+  "lon": -58.285,
+  "radio": 5,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "quilmes-autopista-buenos-aires-la-plata-vuelta": {
+  "lat": -34.735,
+  "lon": -58.255,
+  "radio": 5,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "berazategui-autopista-buenos-aires-la-plata-vuelta": {
+  "lat": -34.765,
+  "lon": -58.215,
+  "radio": 5,
+  "nota": "Autopista Buenos Aires–La Plata"
+ },
+ "maipu-rp-2": {
+  "lat": -36.86,
+  "lon": -57.87,
+  "radio": 10,
+  "nota": "RP 2, cerca de Maipú"
+ },
+ "mar-chiquita-rp-11": {
+  "lat": -37.73,
+  "lon": -57.43,
+  "radio": 8,
+  "nota": "RP 11, cerca de Mar Chiquita"
+ },
+ "general-madariaga-rp-74": {
+  "lat": -37.0,
+  "lon": -57.13,
+  "radio": 8,
+  "nota": "RP 74, cerca de General Madariaga"
+ },
+ "aldao-ap-01-rosario-santa-fe": {
+  "lat": -32.7,
+  "lon": -60.72,
+  "radio": 12,
+  "nota": "AP-01 al norte de Rosario"
+ },
+ "franck-ap-01-rosario-santa-fe": {
+  "lat": -32.15,
+  "lon": -60.7,
+  "radio": 12,
+  "nota": "AP-01 a mitad de camino"
+ },
+ "sauce-viejo-ap-01-rosario-santa-fe": {
+  "lat": -31.72,
+  "lon": -60.8,
+  "radio": 10,
+  "nota": "AP-01, cerca de Santa Fe"
+ },
+ "villa-mercedes-autopista-de-los-comechingones": {
+  "lat": -33.675,
+  "lon": -65.42,
+  "radio": 8,
+  "nota": "Autopista, cerca de Villa Mercedes"
+ },
+ "justo-daract-aut-serranias-puntanas": {
+  "lat": -33.86,
+  "lon": -65.18,
+  "radio": 8,
+  "nota": "Autopista, cerca de Justo Daract"
+ }
+}

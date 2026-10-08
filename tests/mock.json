@@ -1,0 +1,44 @@
+{
+ "https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto": {
+  "texto": "Resolución 248/2026 Dirección Nacional de Vialidad. Cuadro tarifario vigente. Categoría 2 automóviles y camionetas. Peaje Zárate RN 9 Categoría 2 $ 1.700,00 por pasada. Peaje General Lagos RN 9 Categoría 2 $ 1.500,00. Peaje Carcarañá RN 9 Categoría 2 $ 1.500,00. Peaje James Craik RN 9 Categoría 2 $ 1.600,00. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. Texto de relleno del documento oficial. ",
+  "respuesta": {
+   "cabinas": [
+    {
+     "id": "zarate-rn-9",
+     "auto": 1700,
+     "telepase": null,
+     "pico": null,
+     "cita": "Peaje Zárate RN 9 Categoría 2 $ 1.700,00 por pasada"
+    },
+    {
+     "id": "general-lagos-rn-9",
+     "auto": 5000,
+     "telepase": null,
+     "pico": null,
+     "cita": "Peaje General Lagos RN 9 Categoría 2 $ 1.500,00"
+    },
+    {
+     "id": "carcarana-rn-9",
+     "auto": 1500,
+     "telepase": null,
+     "pico": null,
+     "cita": "Peaje Carcarañá cuesta mil quinientos pesos"
+    },
+    {
+     "id": "james-craik-rn-9",
+     "auto": 1800,
+     "telepase": null,
+     "pico": null,
+     "cita": "Peaje James Craik RN 9 Categoría 2 $ 1.600,00"
+    },
+    {
+     "id": "venado-tuerto-rn-8",
+     "auto": null,
+     "telepase": null,
+     "pico": null,
+     "cita": null
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,8 @@
+{
+  "appId": "com.tunombre.calculadorapeajes",
+  "appName": "Calculadora de Peajes",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
