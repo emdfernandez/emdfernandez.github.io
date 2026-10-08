@@ -1,0 +1,524 @@
+<title>Calculadora de Peajes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: una sola columna tipo app. Formulario arriba, resultado (total + mapa + lista de peajes) abajo.
+   Estética: cartelería vial argentina (verde de ruta, ámbar de cabina), tipografía condensada para cifras. */
+:root{
+  --bg:#F2F4F0; --surface:#FFFFFF; --fg:#15201B; --muted:#5B6A62; --line:#D8DED7;
+  --accent:#0A6A4A; --accent-fg:#FFFFFF; --toll:#E3A30B; --pin-b:#C2410C;
+  --warn-bg:#FFF4D6; --warn-fg:#5A4300; --map-bg:#E6EBE4; --map-grid:#D2DBD0;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1512; --surface:#18211C; --fg:#E8EFEA; --muted:#93A59A; --line:#2A372F;
+    --accent:#3FBF8A; --accent-fg:#07140D; --toll:#F0B52A; --pin-b:#F28A55;
+    --warn-bg:#2D2508; --warn-fg:#F2D98A; --map-bg:#1B2620; --map-grid:#25332B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1512; --surface:#18211C; --fg:#E8EFEA; --muted:#93A59A; --line:#2A372F;
+  --accent:#3FBF8A; --accent-fg:#07140D; --toll:#F0B52A; --pin-b:#F28A55;
+  --warn-bg:#2D2508; --warn-fg:#F2D98A; --map-bg:#1B2620; --map-grid:#25332B; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 40px}
+.app{max-width:680px;margin-inline:auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-direction:column;gap:4px}
+.sign{align-self:flex-start;background:var(--accent);color:var(--accent-fg);font-family:var(--font-display);font-weight:700;font-size:1.6rem;letter-spacing:.02em;text-transform:uppercase;padding:4px 14px 2px;border-radius:4px;border:2px solid var(--accent-fg);outline:2px solid var(--accent)}
+header p{margin:6px 0 0;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+@media (max-width:520px){.row{grid-template-columns:1fr}.opts{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);min-width:0}
+input[type=text],select,textarea{font:inherit;font-size:1rem;font-weight:500;letter-spacing:0;text-transform:none;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:64px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--toll);outline-offset:2px}
+.checks{display:flex;flex-direction:column}
+.check{flex-direction:row;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:1rem;font-weight:500;color:var(--fg);padding-block:6px}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+button{font:inherit;font-weight:600;border-radius:6px;cursor:pointer;padding:11px 16px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1.05rem}
+button:disabled{opacity:.6;cursor:progress}
+.swap{padding:10px 12px}
+.ai h2,.result h2{margin:0;font-family:var(--font-display);font-size:1.25rem;letter-spacing:.03em;text-transform:uppercase}
+.ai small,.hint{color:var(--muted);font-size:.85rem}
+.status{min-height:1.2em;font-size:.9rem;color:var(--muted)}
+.status.error{color:var(--pin-b);font-weight:600}
+.banner{background:var(--warn-bg);color:var(--warn-fg);border-radius:6px;padding:10px 12px;font-size:.88rem}
+.total{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+.total .amount{font-family:var(--font-display);font-weight:700;font-size:3.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.total .meta{color:var(--muted);font-variant-numeric:tabular-nums}
+.mapwrap{position:relative;display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--map-bg);color:inherit;text-decoration:none}
+.mapwrap svg{display:block;width:100%;height:auto}
+.mapwrap .go{position:absolute;left:10px;bottom:10px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:.85rem}
+.mapwrap:hover .go{background:var(--accent);color:var(--accent-fg)}
+.tolls{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.tolls li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.tolls li:first-child{border-top:0}
+.km{font-family:var(--font-display);font-weight:600;font-size:1.05rem;min-width:3.6em;color:var(--muted);font-variant-numeric:tabular-nums}
+.tn{min-width:0}
+.tn b{display:block;font-weight:600;overflow-wrap:anywhere}
+.tn span{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.price{font-family:var(--font-display);font-weight:600;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);padding-block:8px}
+.pill{display:inline-block;font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--muted)}
+/* mapa */
+.m-grid{stroke:var(--map-grid);stroke-width:1}
+.m-route-casing{fill:none;stroke:var(--surface);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}
+.m-route{fill:none;stroke:var(--accent);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round}
+.m-toll{fill:var(--toll);stroke:var(--fg);stroke-width:1.5}
+.m-toll.est{fill:var(--surface);stroke-dasharray:3 2}
+.m-a{fill:var(--accent);stroke:var(--surface);stroke-width:2.5}
+.m-b{fill:var(--pin-b);stroke:var(--surface);stroke-width:2.5}
+.m-pin-t{font:700 13px var(--font-body);fill:#fff;text-anchor:middle}
+.m-attr{font:11px var(--font-body);fill:var(--muted);text-anchor:end}
+.m-city{fill:var(--muted)}
+.m-city-t{font:11px var(--font-body);fill:var(--muted);paint-order:stroke;stroke:var(--map-bg);stroke-width:3px}
+@media (prefers-reduced-motion:no-preference){button,.mapwrap .go{transition:background .15s,color .15s}}
+</style>
+
+<div class="app">
+  <header>
+    <div class="sign">Calculadora de peajes</div>
+    <p>Elegí de dónde salís y adónde vas. Se suman los peajes que quedan sobre la ruta.</p>
+  </header>
+
+  <form class="panel" id="form" autocomplete="off">
+    <div class="row">
+      <label for="from">Desde
+        <input type="text" id="from" list="cities" value="Buenos Aires" placeholder="Ciudad o dirección">
+      </label>
+      <button type="button" class="swap" id="swap" aria-label="Invertir origen y destino">⇄</button>
+      <label for="to">Hasta
+        <input type="text" id="to" list="cities" value="Rosario" placeholder="Ciudad o dirección">
+      </label>
+    </div>
+    <div class="opts">
+      <label for="pay">Forma de pago
+        <select id="pay">
+          <option value="manual">Efectivo o sin beneficio</option>
+          <option value="telepase">TelePASE o beneficio</option>
+        </select>
+      </label>
+      <div class="checks">
+        <label class="check" for="round"><input type="checkbox" id="round"> Ida y vuelta</label>
+        <label class="check" for="peak"><input type="checkbox" id="peak"> Horario pico</label>
+      </div>
+    </div>
+    <button type="submit" class="primary" id="go">Calcular peajes</button>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <datalist id="cities"></datalist>
+  </form>
+
+  <section class="panel ai" id="ai">
+    <h2>Contá tu viaje</h2>
+    <label for="ai-text">Escribilo como se lo dirías a alguien
+      <textarea id="ai-text" placeholder="Ej: voy de Rosario a Córdoba con TelePASE, ida y vuelta"></textarea>
+    </label>
+    <button type="button" id="ai-go">Interpretar y calcular</button>
+    <small id="ai-mode"></small>
+  </section>
+
+  <section class="panel result" id="result" hidden>
+    <h2>Resultado</h2>
+    <div class="total">
+      <span class="amount" id="r-total"></span>
+      <span class="meta" id="r-meta"></span>
+    </div>
+    <div class="banner" id="r-banner" hidden></div>
+    <a class="mapwrap" id="r-map" href="#" target="_blank" rel="noopener" aria-label="Abrir la ruta en Google Maps">
+      <div id="r-svg"></div>
+      <span class="go">Ver detalle en Google Maps ↗</span>
+    </a>
+    <ul class="tolls" id="r-list"></ul>
+    <div class="hint" id="r-note"></div>
+  </section>
+</div>
+
+<script id="tarifas-embebido" type="application/json">{"actualizado":"06/10/2026","vehiculo":"Automóvil / vehículo liviano de 2 ejes","cabinas":[{"id":"9-de-julio-rn-5","provincia":"Buenos Aires","nombre":"9 de Julio","ruta":"RN 5","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-35.36045,"lon":-60.7029,"ubic":"estimada","radio":5},{"id":"alberti-au-25-de-mayo","provincia":"CABA","nombre":"Alberti","ruta":"AU 25 de Mayo","auto":1052.56,"telepase":null,"pico":1329.34,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.625501,"lon":-58.40006,"ubic":"estimada","radio":1.5},{"id":"aldao-ap-01-rosario-santa-fe","provincia":"Santa Fe","nombre":"Aldao","ruta":"AP-01 Rosario-Santa Fe","auto":4000.0,"telepase":3200.0,"pico":null,"vigencia":"08/2026","fuente":"https://www.santafe.gob.ar/","lat":-32.711,"lon":-60.748,"ubic":"estimada","radio":5},{"id":"anchorena-aut-por-la-paz-del-mundo","provincia":"San Luis","nombre":"Anchorena","ruta":"Aut. por la Paz del Mundo","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-35.66936,"lon":-65.37533,"ubic":"estimada","radio":5},{"id":"au-25-de-mayo-troncal-au-25-de-mayo","provincia":"CABA","nombre":"AU 25 de Mayo / troncal","ruta":"AU 25 de Mayo","auto":3323.63,"telepase":null,"pico":4710.13,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.64806,"lon":-58.47813,"ubic":"estimada","radio":1.5},{"id":"au-perito-moreno-au-perito-moreno","provincia":"CABA","nombre":"AU Perito Moreno","ruta":"AU Perito Moreno","auto":3323.63,"telepase":null,"pico":4710.13,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.64806,"lon":-58.47813,"ubic":"estimada","radio":1.5},{"id":"barcala-acceso-oeste","provincia":"Buenos Aires","nombre":"Barcala","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.632,"lon":-58.6649,"ubic":"estimada","radio":4},{"id":"belgrano-acceso-norte","provincia":"Buenos Aires","nombre":"Belgrano","ruta":"Acceso Norte","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"07/03/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-297-2026-423660/texto","lat":-34.4765,"lon":-58.649,"ubic":"estimada","radio":4},{"id":"berazategui-autopista-buenos-aires-la-plata-vuelta","provincia":"Buenos Aires","nombre":"Berazategui","ruta":"Autopista Buenos Aires-La Plata","auto":3300.0,"telepase":3164.36,"pico":4100.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"vuelta","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.7598,"lon":-58.1803,"ubic":"estimada","radio":4},{"id":"bernal-autopista-buenos-aires-la-plata-vuelta","provincia":"Buenos Aires","nombre":"Bernal","ruta":"Autopista Buenos Aires-La Plata","auto":3300.0,"telepase":3164.36,"pico":4100.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"vuelta","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.7139,"lon":-58.2513,"ubic":"estimada","radio":4},{"id":"boulogne-sur-mer-au-riccheri","provincia":"Buenos Aires","nombre":"Boulogne Sur Mer","ruta":"AU Riccheri","auto":650.0,"telepase":null,"pico":750.0,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/423328_res248_pdf/archivo","lat":-34.70455,"lon":-58.49955,"ubic":"estimada","radio":4},{"id":"brandsen-acceso-oeste","provincia":"Buenos Aires","nombre":"Brandsen","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6243,"lon":-58.6997,"ubic":"estimada","radio":4},{"id":"buen-ayre-acceso-oeste","provincia":"Buenos Aires","nombre":"Buen Ayre","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.61468,"lon":-58.71888,"ubic":"estimada","radio":4},{"id":"buena-esperanza-autopista-provincial","provincia":"San Luis","nombre":"Buena Esperanza","ruta":"Autopista provincial","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-34.78086,"lon":-65.2601,"ubic":"estimada","radio":4},{"id":"canuelas-rn-3","provincia":"Buenos Aires","nombre":"Cañuelas","ruta":"RN 3","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-35.089,"lon":-58.73,"ubic":"estimada","radio":5},{"id":"capitan-juan-de-san-martin-acceso-norte","provincia":"Buenos Aires","nombre":"Capitán Juan de San Martín","ruta":"Acceso Norte","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"07/03/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-297-2026-423660/texto","lat":-34.5205,"lon":-58.5015,"ubic":"estimada","radio":4},{"id":"ceres-rn-34","provincia":"Santa Fe","nombre":"Ceres","ruta":"RN 34","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-29.881,"lon":-61.947,"ubic":"estimada","radio":5},{"id":"cruz-de-piedra-perilago","provincia":"San Luis","nombre":"Cruz de Piedra","ruta":"Perilago","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.2955,"lon":-66.2125,"ubic":"estimada","radio":5},{"id":"cuatro-esquinas-rp-30","provincia":"San Luis","nombre":"Cuatro Esquinas","ruta":"RP 30","auto":2000.0,"telepase":625.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.574,"lon":-65.937,"ubic":"estimada","radio":5},{"id":"del-rodeo-acceso-oeste","provincia":"Buenos Aires","nombre":"Del Rodeo","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6231,"lon":-58.7302,"ubic":"estimada","radio":4},{"id":"derqui-acceso-oeste","provincia":"Buenos Aires","nombre":"Derqui","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6325,"lon":-58.61194,"ubic":"estimada","radio":4},{"id":"desaguadero-aut-serranias-puntanas","provincia":"San Luis","nombre":"Desaguadero","ruta":"Aut. Serranías Puntanas","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.4129,"lon":-67.11475,"ubic":"estimada","radio":5},{"id":"dock-sud-autopista-buenos-aires-la-plata-ida","provincia":"Buenos Aires","nombre":"Dock Sud","ruta":"Autopista Buenos Aires-La Plata","auto":1900.0,"telepase":1861.39,"pico":2400.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"ida","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.65113,"lon":-58.35363,"ubic":"estimada","radio":4},{"id":"dolores-prats-acceso-oeste","provincia":"Buenos Aires","nombre":"Dolores Prats","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6329,"lon":-58.5905,"ubic":"estimada","radio":4},{"id":"donovan-au-riccheri","provincia":"Buenos Aires","nombre":"Donovan","ruta":"AU Riccheri","auto":650.0,"telepase":null,"pico":750.0,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/423328_res248_pdf/archivo","lat":-34.70846,"lon":-58.5036,"ubic":"estimada","radio":4},{"id":"el-dorado-rn-226","provincia":"Buenos Aires","nombre":"El Dorado","ruta":"RN 226","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-37.88475,"lon":-57.9021,"ubic":"estimada","radio":5},{"id":"ezeiza-au-ezeiza-canuelas","provincia":"Buenos Aires","nombre":"Ezeiza","ruta":"AU Ezeiza-Cañuelas","auto":650.0,"telepase":null,"pico":750.0,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/423328_res248_pdf/archivo","lat":-34.8428,"lon":-58.5255,"ubic":"estimada","radio":4},{"id":"franck-rn-19","provincia":"Santa Fe","nombre":"Franck","ruta":"RN 19","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-31.586,"lon":-60.931,"ubic":"estimada","radio":5},{"id":"franck-ap-01-rosario-santa-fe","provincia":"Santa Fe","nombre":"Franck","ruta":"AP-01 Rosario-Santa Fe","auto":4000.0,"telepase":3200.0,"pico":null,"vigencia":"08/2026","fuente":"https://www.santafe.gob.ar/","lat":-31.6,"lon":-60.93,"ubic":"estimada","radio":5},{"id":"general-lagos-rn-9","provincia":"Santa Fe","nombre":"General Lagos","ruta":"RN 9","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-33.12883,"lon":-60.57805,"ubic":"estimada","radio":5},{"id":"general-madariaga-rp-74","provincia":"Buenos Aires","nombre":"General Madariaga","ruta":"RP 74","auto":3300.0,"telepase":3299.84,"pico":null,"vigencia":"07/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/544/603823","lat":-37.0998,"lon":-56.904,"ubic":"estimada","radio":5},{"id":"general-rodriguez-acceso-oeste","provincia":"Buenos Aires","nombre":"General Rodríguez","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6035,"lon":-58.9475,"ubic":"estimada","radio":4},{"id":"gutierrez-autopista-buenos-aires-la-plata-ida","provincia":"Buenos Aires","nombre":"Gutiérrez","ruta":"Autopista Buenos Aires-La Plata","auto":1900.0,"telepase":1861.39,"pico":2400.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"ida","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.78428,"lon":-58.15324,"ubic":"estimada","radio":4},{"id":"hinojo-rn-226","provincia":"Buenos Aires","nombre":"Hinojo","ruta":"RN 226","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-36.86172,"lon":-60.12278,"ubic":"estimada","radio":5},{"id":"hudson-autopista-buenos-aires-la-plata-ida","provincia":"Buenos Aires","nombre":"Hudson","ruta":"Autopista Buenos Aires-La Plata","auto":1900.0,"telepase":1861.39,"pico":2400.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"ida","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.77387,"lon":-58.16324,"ubic":"estimada","radio":4},{"id":"hudson-autopista-buenos-aires-la-plata-vuelta","provincia":"Buenos Aires","nombre":"Hudson","ruta":"Autopista Buenos Aires-La Plata","auto":3800.0,"telepase":3722.78,"pico":4800.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"vuelta","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.77387,"lon":-58.16324,"ubic":"estimada","radio":4},{"id":"ituzaingo-acceso-oeste","provincia":"Buenos Aires","nombre":"Ituzaingó","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.63146,"lon":-58.67609,"ubic":"estimada","radio":4},{"id":"j-j-castro-acceso-oeste","provincia":"Buenos Aires","nombre":"J. J. Castro","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.598,"lon":-59.009,"ubic":"estimada","radio":4},{"id":"junin-rn-7","provincia":"Buenos Aires","nombre":"Junín","ruta":"RN 7","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-34.57931,"lon":-61.09399,"ubic":"estimada","radio":5},{"id":"justo-daract-aut-serranias-puntanas","provincia":"San Luis","nombre":"Justo Daract","ruta":"Aut. Serranías Puntanas","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.84842,"lon":-65.15857,"ubic":"estimada","radio":5},{"id":"la-cumbre-aut-serranias-puntanas","provincia":"San Luis","nombre":"La Cumbre","ruta":"Aut. Serranías Puntanas","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.35908,"lon":-66.06708,"ubic":"estimada","radio":5},{"id":"la-huella-rp-11","provincia":"Buenos Aires","nombre":"La Huella","ruta":"RP 11","auto":7900.0,"telepase":7856.8,"pico":null,"vigencia":"07/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/544/603823","lat":-36.42818,"lon":-57.3509,"ubic":"estimada","radio":5},{"id":"la-paz-rn-7","provincia":"Mendoza","nombre":"La Paz","ruta":"RN 7","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-33.435827,"lon":-67.502445,"ubic":"estimada","radio":5},{"id":"la-punilla-red-provincial","provincia":"San Luis","nombre":"La Punilla","ruta":"Red provincial","auto":2000.0,"telepase":625.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.155,"lon":-65.082,"ubic":"estimada","radio":5},{"id":"los-puquios-red-vial-san-luis","provincia":"San Luis","nombre":"Los Puquios","ruta":"Red vial San Luis","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.27146,"lon":-66.19654,"ubic":"estimada","radio":5},{"id":"maipu-rp-2","provincia":"Buenos Aires","nombre":"Maipú","ruta":"RP 2","auto":7900.0,"telepase":7856.8,"pico":null,"vigencia":"07/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/544/603823","lat":-36.8625,"lon":-57.8878,"ubic":"estimada","radio":5},{"id":"malvinas-acceso-oeste","provincia":"Buenos Aires","nombre":"Malvinas","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6088,"lon":-58.923,"ubic":"estimada","radio":4},{"id":"mar-chiquita-rp-11","provincia":"Buenos Aires","nombre":"Mar Chiquita","ruta":"RP 11","auto":3700.0,"telepase":3614.12,"pico":null,"vigencia":"07/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/544/603823","lat":-37.731,"lon":-57.449,"ubic":"estimada","radio":5},{"id":"martin-fierro-acceso-oeste","provincia":"Buenos Aires","nombre":"Martín Fierro","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6286,"lon":-58.6887,"ubic":"estimada","radio":4},{"id":"mercado-central-au-riccheri","provincia":"Buenos Aires","nombre":"Mercado Central","ruta":"AU Riccheri","auto":650.0,"telepase":null,"pico":750.0,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/423328_res248_pdf/archivo","lat":-34.70967,"lon":-58.50376,"ubic":"estimada","radio":4},{"id":"monte-grande-au-ezeiza-canuelas","provincia":"Buenos Aires","nombre":"Monte Grande","ruta":"AU Ezeiza-Cañuelas","auto":650.0,"telepase":null,"pico":750.0,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/423328_res248_pdf/archivo","lat":-34.83205,"lon":-58.50856,"ubic":"estimada","radio":4},{"id":"olivera-rn-5","provincia":"Buenos Aires","nombre":"Olivera","ruta":"RN 5","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-34.64514,"lon":-59.29425,"ubic":"estimada","radio":5},{"id":"paseo-del-bajo-paseo-del-bajo","provincia":"CABA","nombre":"Paseo del Bajo","ruta":"Paseo del Bajo","auto":7353.94,"telepase":null,"pico":null,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.616346,"lon":-58.366294,"ubic":"estimada","radio":1.5},{"id":"piedritas-rn-14","provincia":"Entre Ríos","nombre":"Piedritas","ruta":"RN 14","auto":4680.96,"telepase":2340.48,"pico":null,"vigencia":"09/2026","fuente":"https://aumesa.com.ar/tarifas/","lat":-32.88,"lon":-58.4405,"ubic":"estimada","radio":5},{"id":"pilar-acceso-norte-ramal-pilar","provincia":"Buenos Aires","nombre":"Pilar","ruta":"Acceso Norte / Ramal Pilar","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"07/03/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-297-2026-423660/texto","lat":-34.4535,"lon":-58.87,"ubic":"estimada","radio":4},{"id":"portezuelo-red-provincial","provincia":"San Luis","nombre":"Portezuelo","ruta":"Red provincial","auto":2000.0,"telepase":625.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.207,"lon":-66.156,"ubic":"estimada","radio":5},{"id":"posadas-acceso-oeste","provincia":"Buenos Aires","nombre":"Posadas","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6328,"lon":-58.5754,"ubic":"estimada","radio":4},{"id":"quilmes-autopista-buenos-aires-la-plata-vuelta","provincia":"Buenos Aires","nombre":"Quilmes","ruta":"Autopista Buenos Aires-La Plata","auto":3300.0,"telepase":3164.36,"pico":4100.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"vuelta","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.7286,"lon":-58.223,"ubic":"estimada","radio":4},{"id":"quintana-acceso-oeste","provincia":"Buenos Aires","nombre":"Quintana","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6199,"lon":-58.7083,"ubic":"estimada","radio":4},{"id":"red-de-accesos-varias-estaciones-rac-cordoba","provincia":"Córdoba","nombre":"Red de Accesos - varias estaciones","ruta":"RAC Córdoba","auto":3000.0,"telepase":1895.87,"pico":1995.65,"vigencia":"05/09/2026","fuente":"https://caminosdelassierras.com.ar/","lat":-31.4201,"lon":-64.1888,"ubic":"estimada","radio":5},{"id":"republica-acceso-oeste","provincia":"Buenos Aires","nombre":"República","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6374,"lon":-58.5278,"ubic":"estimada","radio":4},{"id":"retiro-ii-au-illia","provincia":"CABA","nombre":"Retiro II","ruta":"AU Illia","auto":1384.71,"telepase":null,"pico":1958.18,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.57333,"lon":-58.395961,"ubic":"estimada","radio":1.5},{"id":"retiro-troncal-illia-au-illia","provincia":"CABA","nombre":"Retiro Troncal / Illia","ruta":"AU Illia","auto":1384.71,"telepase":null,"pico":1958.18,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.575477,"lon":-58.39365,"ubic":"estimada","radio":1.5},{"id":"rio-quinto-autopista-por-la-paz-del-mundo","provincia":"San Luis","nombre":"Río Quinto","ruta":"Autopista por la Paz del Mundo","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.87102,"lon":-65.33121,"ubic":"estimada","radio":4},{"id":"ruta-197-acceso-norte-rn-9","provincia":"Buenos Aires","nombre":"Ruta 197","ruta":"Acceso Norte / RN 9","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"07/03/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-297-2026-423660/texto","lat":-34.4575,"lon":-58.68,"ubic":"estimada","radio":4},{"id":"saladillo-la-toma-autopista-provincial","provincia":"San Luis","nombre":"Saladillo / La Toma","ruta":"Autopista provincial","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.12047,"lon":-65.69133,"ubic":"estimada","radio":4},{"id":"salguero-au-illia","provincia":"CABA","nombre":"Salguero","ruta":"AU Illia","auto":1384.71,"telepase":null,"pico":1958.18,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.571164,"lon":-58.400975,"ubic":"estimada","radio":1.5},{"id":"sampacho-rn-8","provincia":"Córdoba","nombre":"Sampacho","ruta":"RN 8","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-33.42416,"lon":-64.77561,"ubic":"estimada","radio":5},{"id":"san-fernando-acceso-oeste","provincia":"Buenos Aires","nombre":"San Fernando","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.6132,"lon":-58.7539,"ubic":"estimada","radio":4},{"id":"santa-rosa-acceso-oeste","provincia":"Buenos Aires","nombre":"Santa Rosa","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.633,"lon":-58.6427,"ubic":"estimada","radio":4},{"id":"santa-rosa-aut-de-los-comechingones","provincia":"San Luis","nombre":"Santa Rosa","ruta":"Aut. de los Comechingones","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-32.36136,"lon":-65.17498,"ubic":"estimada","radio":5},{"id":"sarmiento-au-illia","provincia":"CABA","nombre":"Sarmiento","ruta":"AU Illia","auto":1384.71,"telepase":null,"pico":1958.18,"vigencia":"03/10/2026","fuente":"https://cliente.ausa.com.ar/","lat":-34.567328,"lon":-58.406383,"ubic":"estimada","radio":1.5},{"id":"sauce-viejo-ap-01-rosario-santa-fe","provincia":"Santa Fe","nombre":"Sauce Viejo","ruta":"AP-01 Rosario-Santa Fe","auto":4000.0,"telepase":3200.0,"pico":null,"vigencia":"08/2026","fuente":"https://www.santafe.gob.ar/","lat":-31.779,"lon":-60.844,"ubic":"estimada","radio":5},{"id":"solis-rn-8","provincia":"Buenos Aires","nombre":"Solís","ruta":"RN 8","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-34.28447,"lon":-59.36349,"ubic":"estimada","radio":5},{"id":"tigre-acceso-norte-ramal-tigre","provincia":"Buenos Aires","nombre":"Tigre","ruta":"Acceso Norte / Ramal Tigre","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"07/03/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-297-2026-423660/texto","lat":-34.4905,"lon":-58.563,"ubic":"estimada","radio":4},{"id":"tristan-suarez-au-ezeiza-canuelas","provincia":"Buenos Aires","nombre":"Tristán Suárez","ruta":"AU Ezeiza-Cañuelas","auto":650.0,"telepase":null,"pico":750.0,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/423328_res248_pdf/archivo","lat":-34.8541,"lon":-58.55142,"ubic":"estimada","radio":4},{"id":"uribelarrea-rn-205","provincia":"Buenos Aires","nombre":"Uribelarrea","ruta":"RN 205","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-35.09714,"lon":-58.93166,"ubic":"estimada","radio":5},{"id":"vasconia-rn-226","provincia":"Buenos Aires","nombre":"Vasconia","ruta":"RN 226","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-37.37302,"lon":-59.00804,"ubic":"estimada","radio":5},{"id":"vergara-acceso-oeste","provincia":"Buenos Aires","nombre":"Vergara","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.633,"lon":-58.6265,"ubic":"estimada","radio":4},{"id":"vicuna-mackenna-rn-7","provincia":"Córdoba","nombre":"Vicuña Mackenna","ruta":"RN 7","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-33.92962,"lon":-64.40466,"ubic":"estimada","radio":5},{"id":"villa-elisa-autopista-buenos-aires-la-plata-ida","provincia":"Buenos Aires","nombre":"Villa Elisa","ruta":"Autopista Buenos Aires-La Plata","auto":1000.0,"telepase":975.02,"pico":1300.0,"vigencia":"10/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/186/577316","sentido":"ida","ref":{"lat":-34.6037,"lon":-58.3816},"lat":-34.8729,"lon":-58.0881,"ubic":"estimada","radio":4},{"id":"villa-mercedes-autopista-de-los-comechingones","provincia":"San Luis","nombre":"Villa Mercedes","ruta":"Autopista de los Comechingones","auto":2000.0,"telepase":765.0,"pico":null,"vigencia":"03/10/2026","fuente":"https://agenciasanluis.com/2026/10/02/1217118-los-peajes-costaran-765-desde-el-3-de-octubre-con-la-tarjeta-sanluisena/","lat":-33.60822,"lon":-65.45161,"ubic":"estimada","radio":4},{"id":"zarate-rn-12","provincia":"Buenos Aires","nombre":"Zárate","ruta":"RN 12","auto":10861.4,"telepase":5430.7,"pico":null,"vigencia":"28/08/2026","fuente":"https://aumesa.com.ar/tarifas/","lat":-34.0939,"lon":-59.0317,"ubic":"estimada","radio":2},{"id":"la-florida-rn-9","provincia":"Tucumán","nombre":"La Florida","ruta":"RN 9","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-27.36355,"lon":-64.95725,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/W674536402","radio":3},{"id":"molle-yaco-rn-9","provincia":"Tucumán","nombre":"Molle Yaco","ruta":"RN 9","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-26.29471,"lon":-65.28076,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/W250929532","radio":3},{"id":"fernandez-rn-34","provincia":"Santiago del Estero","nombre":"Fernández","ruta":"RN 34","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-27.94799,"lon":-63.846381,"ubic":"estimada","radio":5},{"id":"cabeza-de-buey-rn-9-34","provincia":"Salta","nombre":"Cabeza de Buey","ruta":"RN 9/34","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-24.81428,"lon":-65.01589,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/W674536400","radio":3},{"id":"junin-rn-188","provincia":"Buenos Aires","nombre":"Junín","ruta":"RN 188","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-34.532064,"lon":-60.902034,"ubic":"estimada","radio":5},{"id":"riachuelo-rn-12","provincia":"Corrientes","nombre":"Riachuelo","ruta":"RN 12","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-27.621098,"lon":-58.738348,"ubic":"estimada","radio":5},{"id":"ituzaingo-rn-12","provincia":"Corrientes","nombre":"Ituzaingó","ruta":"RN 12","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-27.57866,"lon":-56.61875,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N332448337","radio":3},{"id":"santa-ana-rn-12","provincia":"Misiones","nombre":"Santa Ana","ruta":"RN 12","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-27.42835,"lon":-55.6298,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N332452201","radio":3},{"id":"colonia-victoria-rn-12","provincia":"Misiones","nombre":"Colonia Victoria","ruta":"RN 12","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-26.335948,"lon":-54.617602,"ubic":"estimada","radio":5},{"id":"puente-general-belgrano-rn-16","provincia":"Corrientes/Chaco","nombre":"Puente General Belgrano","ruta":"RN 16","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-27.44621,"lon":-58.88729,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N444671904","radio":3},{"id":"makalle-rn-16","provincia":"Chaco","nombre":"Makallé","ruta":"RN 16","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-27.18683,"lon":-59.3263,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N331938862","radio":3},{"id":"venado-tuerto-rn-8","provincia":"Santa Fe","nombre":"Venado Tuerto","ruta":"RN 8","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-33.69123,"lon":-62.09726,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N2247007576","radio":3},{"id":"larena-rn-8","provincia":"Buenos Aires","nombre":"Larena","ruta":"RN 8","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-34.40323,"lon":-59.01411,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N248471060","radio":3},{"id":"devoto-rn-19","provincia":"Córdoba","nombre":"Devoto","ruta":"RN 19","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-31.41087,"lon":-62.20537,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N2247007587","radio":3},{"id":"san-vicente-rn-34","provincia":"Santa Fe","nombre":"San Vicente","ruta":"RN 34","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-31.79215,"lon":-61.56709,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N2247007585","radio":3},{"id":"zarate-rn-9","provincia":"Buenos Aires","nombre":"Zárate","ruta":"RN 9","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-34.10119,"lon":-59.15036,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/W316271468","radio":3},{"id":"carcarana-rn-9","provincia":"Santa Fe","nombre":"Carcarañá","ruta":"RN 9","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-32.87636,"lon":-61.16987,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/W321134024","radio":3},{"id":"james-craik-rn-9","provincia":"Córdoba","nombre":"James Craik","ruta":"RN 9","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-32.18871,"lon":-63.38946,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/W321133786","radio":3},{"id":"villa-espil-rn-7","provincia":"Buenos Aires","nombre":"Villa Espil","ruta":"RN 7","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-34.51976,"lon":-59.30885,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N2246707075","radio":3},{"id":"trenque-lauquen-rn-5","provincia":"Buenos Aires","nombre":"Trenque Lauquen","ruta":"RN 5","auto":1500.0,"telepase":null,"pico":null,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/nacional/norma-423328/texto","lat":-35.91818,"lon":-62.5561,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N2246707078","radio":3},{"id":"riccheri-au-tte-gral-riccheri","provincia":"Buenos Aires","nombre":"Riccheri","ruta":"AU Tte. Gral. Riccheri","auto":650.0,"telepase":null,"pico":750.0,"vigencia":"26/02/2026","fuente":"https://www.argentina.gob.ar/normativa/423328_res248_pdf/archivo","lat":-34.69902,"lon":-58.49591,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/W1111715374","radio":3},{"id":"colonia-elia-rn-14","provincia":"Entre Ríos","nombre":"Colonia Elía","ruta":"RN 14","auto":4680.96,"telepase":2340.48,"pico":null,"vigencia":"09/2026","fuente":"https://aumesa.com.ar/tarifas/","lat":-32.66697,"lon":-58.44178,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N2246707068","radio":3},{"id":"yerua-rn-14","provincia":"Entre Ríos","nombre":"Yeruá","ruta":"RN 14","auto":4680.96,"telepase":2340.48,"pico":null,"vigencia":"09/2026","fuente":"https://aumesa.com.ar/tarifas/","lat":-31.50761,"lon":-58.18397,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N2246707070","radio":3},{"id":"lujan-acceso-oeste","provincia":"Buenos Aires","nombre":"Luján","ruta":"Acceso Oeste","auto":2000.0,"telepase":994.15,"pico":1192.99,"vigencia":"03/2026","fuente":"https://www.revistarap.com/app/assets/data/documentos/anexo_7588128_1.pdf","lat":-34.58018,"lon":-59.00766,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N308797032","radio":3},{"id":"samborombon-rp-2","provincia":"Buenos Aires","nombre":"Samborombón","ruta":"RP 2","auto":7900.0,"telepase":7856.8,"pico":null,"vigencia":"07/2026","fuente":"https://normas.gba.gob.ar/ar-b/resolucion/2026/544/603823","lat":-35.30753,"lon":-58.05347,"ubic":"verificada","fuente_ubic":"https://mapcarta.com/N249499551","radio":3}]}</script>
+
+<script>
+/* ========= CONFIGURACIÓN ========= */
+// Dirección de tu servidor con IA (ver nota al final). Vacío = modo local sin IA.
+// Contrato: POST {text} -> {origin, destination, telepase: boolean, roundTrip: boolean}
+const AI_ENDPOINT = '';
+// Dónde está tarifas.json. Se prueban en orden; la primera que responde se usa.
+// Cuando lo publiques en GitHub Pages, poné su dirección primero: la app se actualiza sola y 'tarifas.json' (incluido en el APK) queda de respaldo.
+// Servidor de teselas del mapa de calles. Para uso intensivo conviene un proveedor con plan propio (ver README).
+const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TOLLS_URLS = [
+  // 'https://USUARIO.github.io/REPO/tarifas.json',   <- sacá las barras y poné tu dirección de GitHub Pages
+  'tarifas.json'
+];
+
+// <logic>
+/* ========= DATOS ========= */
+// Se cargan desde tarifas.json (lo genera build_tarifas.py a partir de la planilla de tarifas).
+let TOLLS = { actualizado: '', vehiculo: '', cabinas: [] };
+
+const CITIES = [
+  {n:'Buenos Aires', lat:-34.6037, lon:-58.3816, a:['caba','capital federal','bs as','bsas','capital']},
+  {n:'La Plata', lat:-34.9214, lon:-57.9544, a:[]},
+  {n:'Campana', lat:-34.1636, lon:-58.9594, a:[]},
+  {n:'Zárate', lat:-34.0981, lon:-59.0286, a:[]},
+  {n:'San Nicolás', lat:-33.3345, lon:-60.2253, a:['san nicolas de los arroyos']},
+  {n:'Rosario', lat:-32.9442, lon:-60.6505, a:[]},
+  {n:'Santa Fe', lat:-31.6333, lon:-60.7000, a:[]},
+  {n:'Paraná', lat:-31.7333, lon:-60.5333, a:[]},
+  {n:'Villa María', lat:-32.4075, lon:-63.2403, a:[]},
+  {n:'Córdoba', lat:-31.4201, lon:-64.1888, a:['cordoba capital']},
+  {n:'Río Cuarto', lat:-33.1307, lon:-64.3499, a:[]},
+  {n:'Villa Mercedes', lat:-33.6757, lon:-65.4578, a:[]},
+  {n:'San Luis', lat:-33.2950, lon:-66.3356, a:[]},
+  {n:'Mendoza', lat:-32.8895, lon:-68.8458, a:[]},
+  {n:'Santiago del Estero', lat:-27.7951, lon:-64.2615, a:[]},
+  {n:'Tucumán', lat:-26.8083, lon:-65.2176, a:['san miguel de tucuman']},
+  {n:'Chascomús', lat:-35.5736, lon:-58.0097, a:[]},
+  {n:'Dolores', lat:-36.3133, lon:-57.6772, a:[]},
+  {n:'Baradero', lat:-33.8100, lon:-59.5000, a:[]},
+  {n:'Maipú', lat:-36.8600, lon:-57.8700, a:[]},
+  {n:'Mar del Plata', lat:-38.0055, lon:-57.5426, a:['mdp','mardel']},
+  {n:'Luján', lat:-34.5703, lon:-59.1050, a:[]},
+  {n:'Mercedes', lat:-34.6515, lon:-59.4307, a:[]},
+  {n:'Junín', lat:-34.5846, lon:-60.9572, a:[]},
+  {n:'Las Flores', lat:-36.0167, lon:-59.1000, a:[]},
+  {n:'Azul', lat:-36.7769, lon:-59.8585, a:[]},
+  {n:'Bahía Blanca', lat:-38.7196, lon:-62.2724, a:[]},
+  {n:'Neuquén', lat:-38.9516, lon:-68.0591, a:['neuquen capital']},
+  {n:'Gualeguaychú', lat:-33.0094, lon:-58.5172, a:[]},
+  {n:'Concordia', lat:-31.3929, lon:-58.0209, a:[]}
+];
+
+// Puntos intermedios (no son ciudades) que hacen que la ruta aproximada siga las autopistas reales.
+const WAYPOINTS = [
+  {n:'~Dock Sud', lat:-34.651, lon:-58.3536}, {n:'~Hudson', lat:-34.774, lon:-58.163},
+  {n:'~Pacheco', lat:-34.4575, lon:-58.680}, {n:'~Zárate RN 9', lat:-34.1012, lon:-59.1504},
+  {n:'~General Lagos', lat:-33.1288, lon:-60.5781}, {n:'~Aldao', lat:-32.711, lon:-60.748},
+  {n:'~Sauce Viejo', lat:-31.779, lon:-60.844}, {n:'~Ituzaingó', lat:-34.631, lon:-58.676},
+  {n:'~Malvinas', lat:-34.609, lon:-58.923}
+];
+
+// Red simplificada de corredores. Sirve para estimar la ruta cuando no hay conexión al servicio de rutas.
+const EDGES = [
+  ['Buenos Aires','~Dock Sud'],['~Dock Sud','~Hudson'],['~Hudson','La Plata'],['~Hudson','Chascomús'],
+  ['Buenos Aires','~Pacheco'],['~Pacheco','Campana'],['Campana','Zárate'],['Zárate','~Zárate RN 9'],['~Zárate RN 9','Baradero'],
+  ['Baradero','San Nicolás'],['San Nicolás','~General Lagos'],['~General Lagos','Rosario'],
+  ['Chascomús','Dolores'],['Dolores','Maipú'],['Maipú','Mar del Plata'],
+  ['Rosario','Villa María'],['Villa María','Córdoba'],['Rosario','~Aldao'],['~Aldao','~Sauce Viejo'],['~Sauce Viejo','Santa Fe'],['Santa Fe','Paraná'],
+  ['Villa María','Río Cuarto'],['Río Cuarto','Villa Mercedes'],['Villa Mercedes','San Luis'],['San Luis','Mendoza'],
+  ['Buenos Aires','~Ituzaingó'],['~Ituzaingó','~Malvinas'],['~Malvinas','Luján'],['Luján','Mercedes'],['Mercedes','Junín'],['Junín','Río Cuarto'],
+  ['Córdoba','Santiago del Estero'],['Santiago del Estero','Tucumán'],
+  ['Buenos Aires','Las Flores'],['Las Flores','Azul'],['Azul','Bahía Blanca'],['Bahía Blanca','Neuquén'],
+  ['Zárate','Gualeguaychú'],['Gualeguaychú','Concordia']
+];
+
+/* ========= LÓGICA ========= */
+const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+
+function findCity(text){
+  const q = norm(text); if(!q) return null;
+  let hit = CITIES.find(c => norm(c.n) === q || c.a.includes(q));
+  if(!hit && q.length >= 3) hit = CITIES.find(c => norm(c.n).startsWith(q));
+  if(!hit && q.length >= 4) hit = CITIES.find(c => norm(c.n).includes(q));
+  return hit || null;
+}
+
+function hav(lat1,lon1,lat2,lon2){
+  const R=6371, r=Math.PI/180, dLat=(lat2-lat1)*r, dLon=(lon2-lon1)*r;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+
+function offlineRoute(a,b){
+  const ALL = CITIES.concat(WAYPOINTS);
+  const byName = Object.fromEntries(ALL.map(c=>[c.n,c]));
+  const adj = {}; ALL.forEach(c=>adj[c.n]=[]);
+  EDGES.forEach(([x,y])=>{ const d=hav(byName[x].lat,byName[x].lon,byName[y].lat,byName[y].lon); adj[x].push([y,d]); adj[y].push([x,d]); });
+  const nearest = p => CITIES.reduce((m,c)=> hav(p.lat,p.lon,c.lat,c.lon) < hav(p.lat,p.lon,m.lat,m.lon) ? c : m);
+  const s = nearest(a).n, t = nearest(b).n;
+  const dist = {}, prev = {}, todo = new Set(ALL.map(c=>c.n));
+  ALL.forEach(c=>dist[c.n]=Infinity); dist[s]=0;
+  while(todo.size){
+    let u=null; todo.forEach(n=>{ if(u===null || dist[n]<dist[u]) u=n; });
+    if(dist[u]===Infinity) break;
+    todo.delete(u);
+    adj[u].forEach(([v,d])=>{ if(dist[u]+d<dist[v]){ dist[v]=dist[u]+d; prev[v]=u; } });
+  }
+  const path=[]; for(let n=t; n; n=prev[n]) path.unshift(n);
+  if(path[0]!==s) path.length=0;
+  const nodes = path.map(n=>[byName[n].lat,byName[n].lon]);
+  const coords = [[a.lat,a.lon], ...nodes, [b.lat,b.lon]];
+  let km=0; for(let i=1;i<coords.length;i++) km+=hav(coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1]);
+  km*=1.18;
+  return { coords, km, min: km/75*60, source:'aprox' };
+}
+
+// Peajes que quedan sobre la ruta, ordenados por posición. coords = [[lat,lon],...]
+// Cada cabina usa su propio radio (km); las estimadas traen uno más grande.
+function tollsOnRoute(coords, tolls, tolKm){
+  const cum=[0];
+  for(let i=1;i<coords.length;i++) cum.push(cum[i-1]+hav(coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1]));
+  const out=[];
+  tolls.forEach(t=>{
+    const kx=Math.cos(t.lat*Math.PI/180)*111.32, ky=110.57;
+    let best=Infinity, along=0;
+    for(let i=1;i<coords.length;i++){
+      const x1=(coords[i-1][1]-t.lon)*kx, y1=(coords[i-1][0]-t.lat)*ky;
+      const x2=(coords[i][1]-t.lon)*kx,   y2=(coords[i][0]-t.lat)*ky;
+      const dx=x2-x1, dy=y2-y1, L2=dx*dx+dy*dy;
+      let u = L2 ? Math.max(0,Math.min(1,-(x1*dx+y1*dy)/L2)) : 0;
+      const d=Math.hypot(x1+u*dx, y1+u*dy);
+      if(d<best){ best=d; along=cum[i-1]+u*(cum[i]-cum[i-1]); }
+    }
+    if(best<=(t.radio||tolKm)) out.push({ toll:t, along, off:best });
+  });
+  return out.sort((p,q)=>p.along-q.along);
+}
+
+// Precio de una cabina según forma de pago y horario pico.
+// El precio pico se aplica sobre TelePASE/beneficio, o sobre el valor general cuando la cabina no tiene precio TelePASE.
+function tollPrice(t, opts){
+  const tele = opts.telepase && t.telepase != null;
+  let p = tele ? t.telepase : t.auto;
+  if(opts.peak && t.pico != null && (tele || t.telepase == null)) p = t.pico;
+  return p == null ? 0 : p;
+}
+
+// Las cabinas con sentido (por ejemplo la autopista Buenos Aires–La Plata) cobran solo en una dirección.
+// 'ida' = el viaje se aleja del punto de referencia (CABA); 'vuelta' = se acerca.
+function appliesToTrip(t, a, b){
+  if(!t.sentido || !t.ref) return true;
+  const alejandose = hav(t.ref.lat,t.ref.lon,b.lat,b.lon) > hav(t.ref.lat,t.ref.lon,a.lat,a.lon);
+  return (t.sentido === 'ida') === alejandose;
+}
+
+// Autopistas con muchas cabinas seguidas (rampas de entrada y salida): un viaje no las paga todas.
+// Se cuentan como máximo N por viaje (las de mayor precio). Regla a confirmar con la concesionaria.
+const TOPES = { 'Acceso Oeste': 2, 'AU Illia': 2 };
+function applyCaps(found, opts){
+  const capped = [], drop = new Set();
+  Object.keys(TOPES).forEach(ruta=>{
+    const grupo = found.filter(f=>f.toll.ruta===ruta);
+    if(grupo.length <= TOPES[ruta]) return;
+    capped.push(ruta);
+    grupo.slice().sort((p,q)=>tollPrice(q.toll,opts)-tollPrice(p.toll,opts)||p.along-q.along).slice(TOPES[ruta]).forEach(f=>drop.add(f));
+  });
+  return { found: found.filter(f=>!drop.has(f)), capped };
+}
+
+// Corredores (ruta + provincia) por los que pasa el viaje y que tienen otras cabinas todavía sin ubicar.
+function incompleteCorridors(found, cabinas){
+  const key = c => c.ruta+' ('+c.provincia+')';
+  const pending = {}; cabinas.forEach(c=>{ if(c.lat==null) pending[key(c)]=true; });
+  return [...new Set(found.map(f=>key(f.toll)))].filter(k=>pending[k]);
+}
+
+// Interpreta frases simples cuando no hay IA conectada.
+function parseTrip(text){
+  const n = norm(text);
+  const m = n.match(/(?:\bde\b|\bdesde\b)\s+(.+?)\s+(?:\ba\b|\bhasta\b|\bhacia\b)\s+(.+?)(?=\s+(?:con|en|ida|y)\s|[,.;]|$)/);
+  const otherVehicle = /moto|\bcamion(es)?\b|acoplado|trailer|casilla|colectivo|omnibus/.test(n);
+  const telepase = /telepase|tele pase|tarjeta sanluisena|beneficio/.test(n);
+  const roundTrip = /ida y vuelta|\bvuelta\b|regreso/.test(n);
+  if(!m) return { origin:'', destination:'', telepase, otherVehicle, roundTrip };
+  const nice = s => { const c=findCity(s); return c ? c.n : s.replace(/\b\w/g,l=>l.toUpperCase()); };
+  return { origin:nice(m[1]), destination:nice(m[2]), telepase, otherVehicle, roundTrip };
+}
+
+const gmapsUrl = (a,b) => 'https://www.google.com/maps/dir/?api=1&origin='+a.lat+','+a.lon+'&destination='+b.lat+','+b.lon+'&travelmode=driving';
+// </logic>
+
+/* ========= RED: lugares y rutas ========= */
+async function timedFetch(url, ms, opts){
+  const ctl = new AbortController(); const id = setTimeout(()=>ctl.abort(), ms);
+  try { return await fetch(url, Object.assign({signal:ctl.signal}, opts||{})); } finally { clearTimeout(id); }
+}
+
+async function resolvePlace(text){
+  const c = findCity(text);
+  if(c) return { lat:c.lat, lon:c.lon, label:c.n };
+  try{
+    const r = await timedFetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar&q='+encodeURIComponent(text), 8000);
+    const j = await r.json();
+    if(j && j[0]) return { lat:+j[0].lat, lon:+j[0].lon, label:text };
+  }catch(e){}
+  return null;
+}
+
+async function getRoute(a,b){
+  try{
+    const url='https://router.project-osrm.org/route/v1/driving/'+a.lon+','+a.lat+';'+b.lon+','+b.lat+'?overview=full&geometries=geojson';
+    const r = await timedFetch(url, 10000); const j = await r.json();
+    const rt = j.routes && j.routes[0];
+    if(rt) return { coords: rt.geometry.coordinates.map(p=>[p[1],p[0]]), km: rt.distance/1000, min: rt.duration/60, source:'online' };
+  }catch(e){}
+  return offlineRoute(a,b);
+}
+
+/* ========= MAPA (SVG propio, con teselas de OpenStreetMap si hay conexión) ========= */
+let lastTiles = [];
+function drawMap(route, found, a, b){
+  const W=640,H=320,pad=40;
+  const pts=route.coords;
+  let minLat=90,maxLat=-90,minLon=180,maxLon=-180;
+  pts.concat([[a.lat,a.lon],[b.lat,b.lon]]).forEach(p=>{ minLat=Math.min(minLat,p[0]); maxLat=Math.max(maxLat,p[0]); minLon=Math.min(minLon,p[1]); maxLon=Math.max(maxLon,p[1]); });
+  const merc=(lat,lon,z)=>{ const n=256*Math.pow(2,z), s=Math.sin(lat*Math.PI/180); return [(lon+180)/360*n, (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n]; };
+  let z=13;
+  for(; z>3; z--){ const p1=merc(maxLat,minLon,z), p2=merc(minLat,maxLon,z); if(p2[0]-p1[0]<=W-2*pad && p2[1]-p1[1]<=H-2*pad) break; }
+  const tl=merc(maxLat,minLon,z), br=merc(minLat,maxLon,z);
+  const ox=(W-(br[0]-tl[0]))/2-tl[0], oy=(H-(br[1]-tl[1]))/2-tl[1];
+  const P=(lat,lon)=>{ const q=merc(lat,lon,z); return [q[0]+ox, q[1]+oy]; };
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mapa de la ruta">';
+  for(let x=0;x<=W;x+=64) s+='<line class="m-grid" x1="'+x+'" y1="0" x2="'+x+'" y2="'+H+'"/>';
+  for(let y=0;y<=H;y+=64) s+='<line class="m-grid" x1="0" y1="'+y+'" x2="'+W+'" y2="'+y+'"/>';
+  const N=Math.pow(2,z);
+  lastTiles = [];
+  for(let tx=Math.floor(-ox/256); tx<=Math.floor((W-ox)/256); tx++){
+    for(let ty=Math.floor(-oy/256); ty<=Math.floor((H-oy)/256); ty++){
+      if(ty<0||ty>=N) continue;
+      const wx=((tx%N)+N)%N;
+      lastTiles.push({ url:TILE_URL.replace('{z}',z).replace('{x}',wx).replace('{y}',ty), x:tx*256+ox, y:ty*256+oy });
+    }
+  }
+  s+='<g class="m-tiles"></g>';
+  const step=Math.max(1,Math.ceil(pts.length/500));
+  const line=pts.filter((_,i)=>i%step===0||i===pts.length-1).map(p=>P(p[0],p[1]).map(v=>v.toFixed(1)).join(',')).join(' ');
+  s+='<polyline class="m-route-casing" points="'+line+'"/><polyline class="m-route" points="'+line+'"/>';
+  found.forEach(f=>{ const q=P(f.toll.lat,f.toll.lon); s+='<rect class="m-toll'+(f.toll.ubic==='estimada'?' est':'')+'" x="'+(q[0]-6)+'" y="'+(q[1]-6)+'" width="12" height="12" rx="2"/>'; });
+  const A=P(a.lat,a.lon), B=P(b.lat,b.lon);
+  let shown=0;
+  CITIES.forEach(c=>{
+    const q=P(c.lat,c.lon);
+    if(shown>=14 || q[0]<14||q[0]>W-14||q[1]<14||q[1]>H-14) return;
+    if(Math.hypot(q[0]-A[0],q[1]-A[1])<26||Math.hypot(q[0]-B[0],q[1]-B[1])<26) return;
+    shown++;
+    s+='<circle class="m-city" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="3"/><text class="m-city-t" x="'+(q[0]+6).toFixed(1)+'" y="'+(q[1]+4).toFixed(1)+'">'+esc(c.n)+'</text>';
+  });
+  s+='<circle class="m-a" cx="'+A[0]+'" cy="'+A[1]+'" r="12"/><text class="m-pin-t" x="'+A[0]+'" y="'+(A[1]+4.5)+'">A</text>';
+  s+='<circle class="m-b" cx="'+B[0]+'" cy="'+B[1]+'" r="12"/><text class="m-pin-t" x="'+B[0]+'" y="'+(B[1]+4.5)+'">B</text>';
+  s+='</svg>';
+  return s;
+}
+
+// Descarga las teselas del mapa de calles. Si el servidor las rechaza (por ejemplo al abrir el archivo suelto desde la computadora),
+// no se muestra nada raro: queda el mapa esquemático con la ruta, las ciudades y los peajes.
+async function cargarTeselas(){
+  const svg = $('r-svg').querySelector('svg'); if(!svg) return;
+  const g = svg.querySelector('.m-tiles'); const tiles = lastTiles.slice(); let ok = 0;
+  await Promise.all(tiles.map(async t=>{
+    try{
+      const r = await timedFetch(t.url, 10000); if(!r.ok) return;
+      const url = URL.createObjectURL(await r.blob()); if(!svg.isConnected) return;
+      const im = document.createElementNS('http://www.w3.org/2000/svg','image');
+      im.setAttribute('href',url); im.setAttribute('x',t.x); im.setAttribute('y',t.y); im.setAttribute('width',256); im.setAttribute('height',256); im.setAttribute('opacity','.92');
+      g.appendChild(im); ok++;
+    }catch(e){}
+  }));
+  if(ok && svg.isConnected){
+    const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('class','m-attr'); tx.setAttribute('x',632); tx.setAttribute('y',312); tx.textContent='© OpenStreetMap';
+    svg.appendChild(tx);
+  }
+}
+
+/* ========= INTERFAZ ========= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+const fmtTime = min => { const h=Math.floor(min/60), m=Math.round(min%60); return h? h+' h '+String(m).padStart(2,'0')+' min' : m+' min'; };
+
+const lastTrip = { otherVehicle:false };
+function setStatus(msg, isErr){ const el=$('status'); el.textContent=msg||''; el.className='status'+(isErr?' error':''); }
+
+async function calculate(){
+  const go=$('go'); go.disabled=true; setStatus('Buscando ruta…');
+  try{
+    const [a,b] = await Promise.all([resolvePlace($('from').value), resolvePlace($('to').value)]);
+    if(!a || !b){ setStatus('No encontré '+(!a?'el origen':'el destino')+'. Probá con una ciudad de la lista.', true); return; }
+    const route = await getRoute(a,b);
+    const opts = { telepase: $('pay').value==='telepase', peak: $('peak').checked };
+    const mult = $('round').checked ? 2 : 1;
+    const located = TOLLS.cabinas.filter(c=>c.lat!=null);
+    // Sin conexión la ruta es muy gruesa: solo se usan cabinas con radio de al menos 3 km (se excluyen autopistas urbanas y cruces caros).
+    const pool = route.source==='online' ? located : located.filter(c=>(c.radio||7)>=3);
+    const capRes = applyCaps(tollsOnRoute(route.coords, pool, 7).filter(f=>appliesToTrip(f.toll,a,b)), opts);
+    const found = capRes.found;
+    const total = found.reduce((s,f)=>s+tollPrice(f.toll,opts),0)*mult;
+    const incompletos = incompleteCorridors(found, TOLLS.cabinas);
+
+    $('r-total').textContent = money.format(total);
+    $('r-meta').textContent = found.length+' peaje'+(found.length===1?'':'s')+(mult===2?' x2 (ida y vuelta)':'')+' · '+Math.round(route.km)+' km · '+fmtTime(route.min);
+    const avisos=[];
+    if(incompletos.length) avisos.push('Hay peajes de '+incompletos.join(', ')+' que todavía no tienen ubicación, así que el total puede estar incompleto.');
+    if(capRes.capped.length) avisos.push('En '+capRes.capped.join(' y ')+' hay muchas cabinas seguidas (rampas): se cuentan como máximo '+Math.max(...capRes.capped.map(r=>TOPES[r]))+' por viaje.');
+    const nEst = found.filter(f=>f.toll.ubic==='estimada').length;
+    if(nEst) avisos.push(nEst+(nEst===1?' peaje de este viaje tiene':' peajes de este viaje tienen')+' ubicación estimada: se suman porque la ruta pasa por ese corredor, pero su posición exacta no está verificada.');
+    if(route.source!=='online') avisos.push('La ruta es aproximada porque no hubo conexión con el servicio de rutas. Sin conexión no se calculan las autopistas de la Ciudad de Buenos Aires y pueden faltar peajes.');
+    if(lastTrip.otherVehicle) avisos.push('Las tarifas son para auto o vehículo liviano de 2 ejes. Motos, acoplados y camiones pagan otros valores.');
+    const banner=$('r-banner'); banner.hidden=!avisos.length; banner.textContent=avisos.join(' ');
+    $('r-svg').innerHTML = drawMap(route, found, a, b);
+    cargarTeselas();
+    $('r-map').href = gmapsUrl(a,b);
+    $('r-list').innerHTML = found.length
+      ? found.map(f=>{
+          const t=f.toll, tag=(opts.telepase&&t.telepase!=null?' · TelePASE':'')+(opts.peak&&t.pico!=null?' · pico':'');
+          return '<li><span class="km">km '+Math.round(f.along)+'</span><span class="tn"><b>'+esc(t.nombre)+'</b><span>'+esc(t.ruta)+' · '+esc(t.provincia)+tag+(t.ubic==='estimada'?' · ubicación estimada':'')+'</span></span><span class="price">'+money.format(tollPrice(t,opts))+'</span></li>';
+        }).join('')
+      : '<li class="empty">No hay peajes cargados sobre esta ruta.</li>';
+    const nVer = located.filter(c=>c.ubic==='verificada').length, nEst2 = located.length-nVer, sinUbic = TOLLS.cabinas.length-located.length;
+    $('r-note').textContent = 'Tarifas al '+TOLLS.actualizado+' para '+(TOLLS.vehiculo||'auto').toLowerCase()+'. De '+TOLLS.cabinas.length+' peajes, '+nVer+' tienen ubicación verificada, '+nEst2+' estimada '+(sinUbic?'y '+sinUbic+' todavía no se suman por falta de ubicación.':'y ninguna queda sin ubicar.');
+    $('result').hidden=false;
+    setStatus('');
+  }catch(e){
+    setStatus('No se pudo calcular. Revisá la conexión e intentá de nuevo.', true);
+  }finally{ go.disabled=false; }
+}
+
+async function interpret(){
+  const text=$('ai-text').value.trim(); if(!text) return;
+  $('ai-go').disabled=true;
+  let t=null;
+  if(AI_ENDPOINT){
+    try{ const r=await timedFetch(AI_ENDPOINT,15000,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})}); if(r.ok) t=await r.json(); }catch(e){}
+  }
+  if(!t) t=parseTrip(text);
+  $('ai-go').disabled=false;
+  if(!t.origin || !t.destination){ setStatus('No pude entender el origen y el destino. Escribilo como "de Rosario a Córdoba".', true); return; }
+  $('from').value=t.origin; $('to').value=t.destination;
+  $('pay').value = t.telepase ? 'telepase' : 'manual';
+  $('round').checked=!!t.roundTrip;
+  lastTrip.otherVehicle=!!t.otherVehicle;
+  calculate();
+}
+
+async function loadTarifas(){
+  for(const url of TOLLS_URLS){
+    try{
+      const r=await timedFetch(url,8000); const j=await r.json();
+      if(j && Array.isArray(j.cabinas) && j.cabinas.length){ TOLLS=j; return true; }
+    }catch(e){}
+  }
+  try{
+    const j = JSON.parse(document.getElementById('tarifas-embebido').textContent);
+    if(j && Array.isArray(j.cabinas) && j.cabinas.length){ TOLLS=j; return true; }
+  }catch(e){}
+  return false;
+}
+
+(function init(){
+  $('cities').innerHTML = CITIES.map(c=>'<option value="'+esc(c.n)+'"></option>').join('');
+  $('ai-mode').textContent = AI_ENDPOINT ? 'Interpretado con IA.' : 'Modo local: entiende frases simples como "de Rosario a Córdoba con TelePASE, ida y vuelta". Con el servicio de IA conectado entiende cualquier frase.';
+  $('form').addEventListener('submit', e=>{ e.preventDefault(); lastTrip.otherVehicle=false; calculate(); });
+  $('swap').addEventListener('click', ()=>{ const f=$('from').value; $('from').value=$('to').value; $('to').value=f; calculate(); });
+  $('ai-go').addEventListener('click', interpret);
+  loadTarifas().then(ok=>{ if(ok) calculate(); else setStatus('No se pudieron cargar las tarifas.', true); });
+})();
+
+/* NOTA PARA EL SERVIDOR DE IA (AI_ENDPOINT)
+   Función serverless que guarda la clave de la API, recibe {text}, le pide al modelo que devuelva
+   JSON {origin, destination, telepase, roundTrip, otherVehicle} y lo responde. La clave nunca va dentro del APK. */
+</script>
